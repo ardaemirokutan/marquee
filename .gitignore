@@ -1,0 +1,6 @@
+out/
+.keystore/
+*.keystore
+*.apk
+*.idsig
+local.env
