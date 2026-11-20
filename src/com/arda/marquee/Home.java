@@ -362,7 +362,7 @@ public class Home extends Activity {
         // Home resumes several times per Home press; only rebuild when a setting changed, so focus isn't yanked away.
         Map<String, Object> all = new HashMap<>(Prefs.p(this).getAll());
         if (!Prefs.lastFirst(this)) all.remove("last"); // opening an app only rebuilds the row when that reorders it
-        String sig = all.toString();
+        String sig = all.toString() + getExternalFilesDir("banners").lastModified(); // a logo added or removed
         if (sig.equals(lastSig) && !apps.isEmpty()) return;
         lastSig = sig;
         fx = Prefs.fx(this);
@@ -382,7 +382,9 @@ public class Home extends Activity {
         for (ResolveInfo r : pm.queryIntentActivities(q, 0)) {
             String pkg = r.activityInfo.packageName;
             if (pkg.equals(getPackageName()) || pkg.equals("com.google.android.videos")) continue; // Play Movies is retired
-            String src = r.activityInfo.applicationInfo.sourceDir; // changes when the app is updated
+            // a user-supplied logo (files/banners/<package>.png) wins over the app's own banner
+            java.io.File own = new java.io.File(getExternalFilesDir("banners"), pkg + ".png");
+            String src = r.activityInfo.applicationInfo.sourceDir + own.lastModified(); // changes when the app or the logo is updated
             App a = cache.get(pkg);
             if (a == null || !src.equals(a.src)) {
                 Intent launch = pm.getLeanbackLaunchIntentForPackage(pkg);
@@ -392,7 +394,8 @@ public class Home extends Activity {
                 String known = NAMES.get(pkg);
                 a.name = known != null ? known : r.loadLabel(pm).toString();
                 a.line = known != null ? getString(DESCS.get(pkg)) : "";
-                Drawable d = r.activityInfo.loadBanner(pm);
+                Drawable d = own.isFile() ? Drawable.createFromPath(own.getPath()) : null;
+                if (d == null) d = r.activityInfo.loadBanner(pm);
                 if (d == null) d = r.activityInfo.applicationInfo.loadBanner(pm);
                 a.banner = d != null ? d : r.loadIcon(pm);
                 if (a.banner == null) a.colored = true; // grey

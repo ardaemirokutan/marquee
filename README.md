@@ -25,6 +25,7 @@ Plain Java, no Gradle, no libraries, about 550 KB.
 - **Hold OK on an app:** move to front, hide, app info, uninstall. Remembers the last opened app.
 - **Animations, all switchable:** the banner grows to fill the screen when you open an app, a soft light in the app's own colour crosses the focused banner, and animation speed Normal / Fast / Off.
 - **Built for weak TV hardware:** only transform and alpha animations, no blur, colours worked out once per app on a background thread, the background baked into one small bitmap.
+- **Your own logos:** replace any app's logo with your own picture.
 - **English and Turkish**, following the device language.
 
 ## Install
@@ -70,6 +71,17 @@ Install the Marquee launcher on my Google TV over wireless adb.
 Do not change any other TV setting.
 ```
 
+## Your own logos
+
+Don't like an app's logo? Put a PNG (16:9, e.g. 480×270) named after the app's package on the TV and press Home:
+
+```sh
+adb shell pm list packages                     # find the package, e.g. com.netflix.ninja
+adb push netflix.png /sdcard/Android/data/com.arda.marquee/files/banners/com.netflix.ninja.png
+```
+
+Delete the file to get the app's own logo back.
+
 ## Uninstall
 
 ```sh
@@ -113,6 +125,7 @@ Düz Java; Gradle ve kütüphane yok, yaklaşık 550 KB.
 - **Uygulamada OK'a uzun bas:** başa taşı, gizle, uygulama bilgisi, kaldır. Son açılan uygulamayı hatırlar.
 - **Animasyonlar, hepsi kapatılabilir:** uygulama açılırken banner büyüyüp ekranı doldurur, seçili banner'ın üstünden uygulamanın kendi renginde yumuşak bir ışık geçer, animasyon hızı Normal / Hızlı / Kapalı.
 - **Zayıf TV donanımı için yapıldı:** yalnız konum/ölçek/saydamlık animasyonu, bulanıklık yok, renkler her uygulama için bir kez arka planda hesaplanır, arka plan tek küçük bir resimde.
+- **Kendi logoların:** istediğin uygulamanın logosunu kendi resminle değiştir.
 - **Türkçe ve İngilizce**, cihazın dilini izler.
 
 ### Kurulum
@@ -157,6 +170,17 @@ Google TV'me kablosuz adb ile Marquee ana ekranını kur.
    adb shell dumpsys window | grep mCurrentFocus ile önde com.arda.marquee olduğunu doğrula.
 TV'nin başka hiçbir ayarını değiştirme.
 ```
+
+### Kendi logoların
+
+Bir uygulamanın logosunu beğenmedin mi? Uygulamanın paket adıyla bir PNG (16:9, örneğin 480×270) TV'ye koy ve Home'a bas:
+
+```sh
+adb shell pm list packages                     # paket adını bul, örn. com.netflix.ninja
+adb push netflix.png /sdcard/Android/data/com.arda.marquee/files/banners/com.netflix.ninja.png
+```
+
+Uygulamanın kendi logosuna dönmek için dosyayı sil.
 
 ### Kaldırma
 
