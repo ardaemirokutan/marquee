@@ -222,6 +222,28 @@ public class Home extends Activity {
         saver.addView(saverBox, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
         root.addView(saver, match());
         setContentView(root);
+        // an app installed, removed or updated: forget the row so the next load() rebuilds it
+        android.content.IntentFilter pf = new android.content.IntentFilter();
+        pf.addAction(Intent.ACTION_PACKAGE_ADDED); pf.addAction(Intent.ACTION_PACKAGE_REMOVED);
+        pf.addAction(Intent.ACTION_PACKAGE_CHANGED); pf.addAction(Intent.ACTION_PACKAGE_REPLACED);
+        pf.addDataScheme("package");
+        registerReceiver(pkgWatch, pf);
+    }
+
+    // named static class: d8 34.0.0 crashes on anonymous classes built by javac 21
+    static class PkgWatch extends android.content.BroadcastReceiver {
+        final Home h;
+        PkgWatch(Home h) { this.h = h; }
+        @Override public void onReceive(android.content.Context c, Intent i) {
+            h.lastSig = "";
+            if (h.hasWindowFocus()) h.load(); // installed while Home is on screen: show it now
+        }
+    }
+    final PkgWatch pkgWatch = new PkgWatch(this);
+
+    @Override protected void onDestroy() {
+        unregisterReceiver(pkgWatch);
+        super.onDestroy();
     }
 
     long d(long ms) { return (long) (ms * k); }
