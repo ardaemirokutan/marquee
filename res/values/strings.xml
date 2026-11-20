@@ -84,7 +84,7 @@
     <string name="hint_greet">"\"Good morning\" and so on, next to the name"</string>
     <string name="hint_saver">Black clock screen after this long without a key press</string>
     <string name="hint_speed">Off makes every change instant</string>
-    <string name="hint_launch">The banner grows to fill the screen as the app opens</string>
+    <string name="hint_launch">Coloured ribbons drop down like a curtain as the app opens</string>
     <string name="hint_sweep">A soft light in the app\'s own colour crosses the focused banner</string>
     <string name="hint_system">Opens the Android screen</string>
 </resources>

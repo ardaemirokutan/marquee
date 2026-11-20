@@ -10,7 +10,7 @@ Plain Java, no Gradle, no libraries, about 550 KB.
 |---|---|
 | ![Settings](docs/settings.png) | ![Animation settings](docs/animations.png) |
 | **Launch animation** | **Screensaver** |
-| ![Launch animation: the banner grows to fill the screen](docs/launch.png) | ![Screensaver](docs/screensaver.png) |
+| ![Launch animation: coloured ribbons drop like a curtain](docs/launch.png) | ![Screensaver](docs/screensaver.png) |
 
 **[Download the latest APK](https://github.com/ardaemirokutan/marquee/releases/latest/download/marquee.apk)** · [Türkçe](#türkçe)
 
@@ -23,7 +23,7 @@ Plain Java, no Gradle, no libraries, about 550 KB.
 - **People.** Each person has their own hidden apps and app order. Switch person in settings.
 - **Screensaver.** After 2, 5 or 10 idle minutes: a big clock, date and weather on black, moving a little each minute so nothing burns in. Any key wakes it.
 - **Hold OK on an app:** move to front, hide, app info, uninstall. Remembers the last opened app.
-- **Animations, all switchable:** the banner grows to fill the screen when you open an app, a soft light in the app's own colour crosses the focused banner, and animation speed Normal / Fast / Off.
+- **Animations, all switchable:** coloured ribbons drop down like a curtain when you open an app, a soft light in the app's own colour crosses the focused banner, and animation speed Normal / Fast / Off.
 - **Built for weak TV hardware:** only transform and alpha animations, no blur, colours worked out once per app on a background thread, the background baked into one small bitmap.
 - **Your own logos:** replace any app's logo with your own picture.
 - **English and Turkish**, following the device language.
@@ -123,7 +123,7 @@ Düz Java; Gradle ve kütüphane yok, yaklaşık 550 KB.
 - **Kişiler.** Her kişinin kendi gizli uygulamaları ve uygulama sırası var. Kişiyi ayarlardan değiştir.
 - **Ekran koruyucu.** 2, 5 ya da 10 dakika boşta kalınca siyah ekranda büyük saat, tarih ve hava; ekran yanmasın diye dakikada bir hafifçe yer değiştirir. Herhangi bir tuş kapatır.
 - **Uygulamada OK'a uzun bas:** başa taşı, gizle, uygulama bilgisi, kaldır. Son açılan uygulamayı hatırlar.
-- **Animasyonlar, hepsi kapatılabilir:** uygulama açılırken banner büyüyüp ekranı doldurur, seçili banner'ın üstünden uygulamanın kendi renginde yumuşak bir ışık geçer, animasyon hızı Normal / Hızlı / Kapalı.
+- **Animasyonlar, hepsi kapatılabilir:** uygulama açılırken renkli şeritler perde gibi iner, seçili banner'ın üstünden uygulamanın kendi renginde yumuşak bir ışık geçer, animasyon hızı Normal / Hızlı / Kapalı.
 - **Zayıf TV donanımı için yapıldı:** yalnız konum/ölçek/saydamlık animasyonu, bulanıklık yok, renkler her uygulama için bir kez arka planda hesaplanır, arka plan tek küçük bir resimde.
 - **Kendi logoların:** istediğin uygulamanın logosunu kendi resminle değiştir.
 - **Türkçe ve İngilizce**, cihazın dilini izler.

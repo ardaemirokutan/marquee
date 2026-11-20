@@ -84,7 +84,7 @@
     <string name="hint_greet">Adın yanında \"Günaydın\" gibi bir selam</string>
     <string name="hint_saver">Bu süre tuşa basılmazsa siyah saat ekranı açılır</string>
     <string name="hint_speed">Kapalı: tüm geçişler anında olur</string>
-    <string name="hint_launch">Uygulama açılırken banner büyüyüp ekranı doldurur</string>
+    <string name="hint_launch">Uygulama açılırken renkli şeritler perde gibi iner</string>
     <string name="hint_sweep">Seçili banner\'ın üstünden uygulamanın kendi renginde yumuşak bir ışık geçer</string>
     <string name="hint_system">Android ekranını açar</string>
 </resources>

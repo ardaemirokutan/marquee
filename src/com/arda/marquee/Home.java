@@ -11,7 +11,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.Typeface;
-import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
@@ -66,6 +65,7 @@ public class Home extends Activity {
     static final String[] SYS = {Settings.ACTION_SETTINGS, Settings.ACTION_WIFI_SETTINGS, Settings.ACTION_SOUND_SETTINGS, Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS};
     static final int[] SYS_NAMES = {R.string.pill_settings, R.string.pill_wifi, R.string.pill_display, R.string.pill_apps};
     static final int GREY = 0xFF8E8E93;
+    static final int RIBBONS = 7;
 
     /** One installed app. Banner and colour are loaded once per installed version (src) and kept in cache. */
     static class App {
@@ -80,15 +80,22 @@ public class Home extends Activity {
         @Override public void getOutline(View v, Outline o) { o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), r); }
     }
 
+    View shade;
     float u; // 1% of screen width, so the layout matches the 16:9 preview at any resolution
     float k = 1; // animation speed from settings: 1, 0.5 or 0 (instant)
-    Typeface inter;
-    final ColorDrawable fill = new ColorDrawable(Color.BLACK); // the app colour; a fixed dark gradient on top shapes it
+    static final Map<Integer, Typeface> FONTS = new HashMap<>();
+    /** One Typeface per weight, shared by every screen: a variation set per TextView builds a new font each time and misses the glyph cache. */
+    static Typeface font(android.content.Context c, int weight) {
+        Typeface t = FONTS.get(weight);
+        if (t == null) { t = new Typeface.Builder(c.getAssets(), "Inter.ttf").setFontVariationSettings("'wght' " + weight).build(); FONTS.put(weight, t); }
+        return t;
+    }
+    android.graphics.drawable.BitmapDrawable fill; // the darkening gradients as grey levels, multiplied by the app colour: one opaque full-screen layer
     int bgColor = Color.BLACK, bgFrom, bgTo;
     final ValueAnimator bgAnim = ValueAnimator.ofFloat(0f, 1f);
     TextView name, line, eye;
     FrameLayout root, menu; // menu: the long-press overlay while it is open
-    FrameLayout launchFx; // the launch animation overlay; removed when Home stops or comes back
+    LinearLayout launchFx; // the launch ribbons, built once; hidden when Home stops or comes back
     LinearLayout top, clock, hero, row;
     HorizontalScrollView scroll;
     TextClock time;
@@ -115,28 +122,28 @@ public class Home extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         u = getResources().getDisplayMetrics().widthPixels / 100f;
-        inter = Typeface.createFromAsset(getAssets(), "Inter.ttf");
         getWindow().setBackgroundDrawable(null); // the back view covers the screen; saves a full-screen fill per frame
         root = new FrameLayout(this);
 
-        View back = new View(this);
-        back.setBackground(fill);
-        root.addView(back, match());
-        // the three darkening gradients, baked once into one small bitmap: one cheap full-screen layer instead of three
-        View shade = new View(this);
-        android.graphics.Bitmap sb = android.graphics.Bitmap.createBitmap(480, 270, android.graphics.Bitmap.Config.ARGB_8888);
-        android.graphics.Canvas sc = new android.graphics.Canvas(sb);
+        // the three darkening gradients baked once over white into a small bitmap; colour x grey = the colour darkened the same way
+        shade = new View(this);
+        Bitmap sb = Bitmap.createBitmap(480, 270, Bitmap.Config.ARGB_8888);
+        sb.eraseColor(Color.WHITE);
+        Canvas sc = new Canvas(sb);
         GradientDrawable[] gs = {
             new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xC7000000, 0x33000000}), // 78% top-left to 20% bottom-right
             new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, new int[]{0xE6000000, 0x59000000, 0x00000000}),
             new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{0x99000000, 0x00000000, 0x00000000})};
         for (GradientDrawable g : gs) { g.setBounds(0, 0, 480, 270); g.draw(sc); }
-        android.graphics.drawable.BitmapDrawable sd0 = new android.graphics.drawable.BitmapDrawable(getResources(), sb);
-        sd0.setFilterBitmap(true);
-        shade.setBackground(sd0);
+        sb.setHasAlpha(false);
+        fill = new android.graphics.drawable.BitmapDrawable(getResources(), sb);
+        fill.setFilterBitmap(true);
+        fill.setTintMode(android.graphics.PorterDuff.Mode.MULTIPLY);
+        fill.setTint(Color.BLACK);
+        shade.setBackground(fill);
         root.addView(shade, match());
         // one animator for every colour change: only sets a colour per frame, allocates nothing
-        bgAnim.addUpdateListener(v -> { bgColor = mix(bgFrom, bgTo, v.getAnimatedFraction()); fill.setColor(bgColor); });
+        bgAnim.addUpdateListener(v -> { bgColor = mix(bgFrom, bgTo, v.getAnimatedFraction()); fill.setTint(bgColor); });
 
         top = new LinearLayout(this);
         top.setOrientation(LinearLayout.VERTICAL);
@@ -179,11 +186,14 @@ public class Home extends Activity {
         eye.setText(R.string.eye_app);
         name = text(6.4f, 700, 0xFFFFFFFF, -0.035f);
         line = text(1.55f, 400, 0xC7FFFFFF, 0.005f);
-        hero.addView(eye);
-        LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        name.setSingleLine(true);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        // full width, not wrap: a new name of the same height then only redraws, with no layout pass over the screen
+        hero.addView(eye, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         np.topMargin = (int) (0.6f * u);
         hero.addView(name, np);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.topMargin = (int) (1f * u);
         hero.addView(line, lp);
         FrameLayout.LayoutParams hp = at(Gravity.TOP | Gravity.START, 5, 15.5f);
@@ -201,6 +211,8 @@ public class Home extends Activity {
         scroll.addView(row);
         root.addView(scroll, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
         root.setClipChildren(false);
+        // these fade as a whole (launch, intro): alpha per child, not through a full offscreen copy each frame
+        for (View v : new View[]{top, clock, hero, scroll}) v.forceHasOverlappingRendering(false);
 
         // screensaver: black, big clock + date + weather, one short drift a minute against burn-in
         saver = new FrameLayout(this);
@@ -221,6 +233,14 @@ public class Home extends Activity {
         saverBox.addView(saverTime); saverBox.addView(saverDate); saverBox.addView(saverWx);
         saver.addView(saverBox, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
         root.addView(saver, match());
+        launchFx = new LinearLayout(this);
+        launchFx.setVisibility(View.GONE);
+        for (int i = 0; i < RIBBONS; i++) {
+            View r = new View(this);
+            r.setScaleY(0f);
+            launchFx.addView(r, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+        }
+        root.addView(launchFx, match());
         setContentView(root);
         // an app installed, removed or updated: forget the row so the next load() rebuilds it
         android.content.IntentFilter pf = new android.content.IntentFilter();
@@ -260,8 +280,10 @@ public class Home extends Activity {
     @Override protected void onPause() {
         super.onPause();
         tickH.removeCallbacksAndMessages(null);
+        if (introPending) { introPending = false; for (View v : introViews()) v.setAlpha(1f); } // left before it ran: just show
         saver.animate().cancel();
         saver.setVisibility(View.GONE);
+        homeShown(true);
     }
 
     @Override protected void onStop() {
@@ -330,7 +352,12 @@ public class Home extends Activity {
         drift(false);
         saver.setAlpha(0f);
         saver.setVisibility(View.VISIBLE);
-        saver.animate().alpha(1f).setDuration(d(1500)).start();
+        saver.animate().alpha(1f).setDuration(d(1500)).withEndAction(() -> homeShown(false)).start();
+    }
+
+    /** Not drawn while the screensaver covers it, so its drift redraws only the black screen. Alpha, not visibility: the row keeps focus. */
+    void homeShown(boolean on) {
+        for (View x : new View[]{shade, top, clock, hero, scroll}) x.setAlpha(on ? 1f : 0f);
     }
 
     /** A new spot each minute, within the middle of the screen. */
@@ -348,6 +375,7 @@ public class Home extends Activity {
             if (e.getAction() == KeyEvent.ACTION_DOWN) {
                 eatUp = true;
                 saver.animate().cancel();
+                homeShown(true);
                 saver.animate().alpha(0f).setDuration(d(300)).withEndAction(() -> saver.setVisibility(View.GONE)).start();
                 checkSaver();
             }
@@ -358,11 +386,38 @@ public class Home extends Activity {
 
     String lastSig = "";
 
+    /** User logos; only on Android 11+, where no other app can write into this app's external folder. */
+    java.io.File logoDir;
+    java.io.File logoDir() {
+        if (logoDir == null && android.os.Build.VERSION.SDK_INT >= 30) logoDir = getExternalFilesDir("banners"); // disk + binder work: once
+        return logoDir;
+    }
+
+    /** A user logo decoded at banner size at most; anything odd (too big, broken, missing) falls back to the app's banner. */
+    Drawable ownLogo(java.io.File f) {
+        if (f == null || !f.isFile() || f.length() > 4_000_000) return null;
+        try {
+            android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+            o.inJustDecodeBounds = true;
+            android.graphics.BitmapFactory.decodeFile(f.getPath(), o);
+            if (o.outWidth <= 0 || o.outHeight <= 0) return null;
+            int n = 1;
+            while (o.outWidth / (n * 2) >= 640 && o.outHeight / (n * 2) >= 360) n *= 2; // keep at least 640x360
+            o = new android.graphics.BitmapFactory.Options();
+            o.inSampleSize = n;
+            Bitmap b = android.graphics.BitmapFactory.decodeFile(f.getPath(), o);
+            return b != null ? new android.graphics.drawable.BitmapDrawable(getResources(), b) : null;
+        } catch (Throwable t) { // includes OutOfMemoryError: a bad file must never take the home screen down
+            return null;
+        }
+    }
+
     void load() {
         // Home resumes several times per Home press; only rebuild when a setting changed, so focus isn't yanked away.
         Map<String, Object> all = new HashMap<>(Prefs.p(this).getAll());
         if (!Prefs.lastFirst(this)) all.remove("last"); // opening an app only rebuilds the row when that reorders it
-        String sig = all.toString() + getExternalFilesDir("banners").lastModified(); // a logo added or removed
+        java.io.File logos = logoDir();
+        String sig = all.toString() + (logos != null ? logos.lastModified() : 0); // a logo added or removed
         if (sig.equals(lastSig) && !apps.isEmpty()) return;
         lastSig = sig;
         fx = Prefs.fx(this);
@@ -374,7 +429,7 @@ public class Home extends Activity {
         tf = Prefs.clock24(this) ? "HH:mm" : "h:mm a"; // set both, so the setting wins over the system's 24-hour switch
         time.setFormat24Hour(tf); time.setFormat12Hour(tf);
         line.setVisibility(Prefs.desc(this) ? View.VISIBLE : View.GONE);
-        if (!colorBg) { bgAnim.cancel(); bgColor = 0xFF0B0B0D; fill.setColor(bgColor); }
+        if (!colorBg) { bgAnim.cancel(); bgColor = 0xFF0B0B0D; fill.setTint(bgColor); }
         row.removeAllViews(); items.clear(); apps.clear();
         PackageManager pm = getPackageManager();
         Intent q = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
@@ -383,8 +438,8 @@ public class Home extends Activity {
             String pkg = r.activityInfo.packageName;
             if (pkg.equals(getPackageName()) || pkg.equals("com.google.android.videos")) continue; // Play Movies is retired
             // a user-supplied logo (files/banners/<package>.png) wins over the app's own banner
-            java.io.File own = new java.io.File(getExternalFilesDir("banners"), pkg + ".png");
-            String src = r.activityInfo.applicationInfo.sourceDir + own.lastModified(); // changes when the app or the logo is updated
+            java.io.File own = logos != null ? new java.io.File(logos, pkg + ".png") : null;
+            String src = r.activityInfo.applicationInfo.sourceDir + (own != null ? own.lastModified() : 0); // changes when the app or the logo is updated
             App a = cache.get(pkg);
             if (a == null || !src.equals(a.src)) {
                 Intent launch = pm.getLeanbackLaunchIntentForPackage(pkg);
@@ -394,10 +449,10 @@ public class Home extends Activity {
                 String known = NAMES.get(pkg);
                 a.name = known != null ? known : r.loadLabel(pm).toString();
                 a.line = known != null ? getString(DESCS.get(pkg)) : "";
-                Drawable d = own.isFile() ? Drawable.createFromPath(own.getPath()) : null;
+                Drawable d = ownLogo(own);
                 if (d == null) d = r.activityInfo.loadBanner(pm);
                 if (d == null) d = r.activityInfo.applicationInfo.loadBanner(pm);
-                a.banner = d != null ? d : r.loadIcon(pm);
+                a.banner = small(d != null ? d : r.loadIcon(pm));
                 if (a.banner == null) a.colored = true; // grey
                 else if (a.banner.getConstantState() == null) { a.color = mainColor(a.banner); a.colored = true; } // can't copy it for a background thread; before its view sets its bounds
                 cache.put(pkg, a);
@@ -425,8 +480,11 @@ public class Home extends Activity {
         if (!items.isEmpty()) items.get(Math.min(lastFocus, items.size() - 1)).requestFocus();
         if (intro) {
             intro = false;
-            rise(top, -1.5f, 0); rise(clock, -1.5f, 0); rise(hero, 2f, 100);
-            for (int i = 0; i < items.size(); i++) rise(items.get(i), 3f, 200 + i * 40L);
+            if (k > 0) { // wait, hidden, for the system's window transition: running both at once halved the frame rate
+                introPending = true;
+                for (View v : introViews()) v.setAlpha(0f);
+                tickH.postDelayed(introRun, 1200); // in case the window comes up without a transition
+            }
         }
         colors(need);
     }
@@ -457,6 +515,39 @@ public class Home extends Activity {
     void paint(App a) {
         if (a.glow != null) a.glow.setColors(new int[]{(a.color & 0xFFFFFF) | 0xB0000000, a.color & 0xFFFFFF});
         if (a.sweep != null) { int l = mix(a.color, Color.WHITE, 0.65f) & 0xFFFFFF; a.sweep.setColors(new int[]{l, l | 0x59000000, l}); }
+    }
+
+    /** The banner pre-cropped to the tile at its focused size: the GPU then never shrinks a big banner image on every frame. */
+    Drawable small(Drawable d) {
+        if (d == null) return null;
+        int w = Math.round(7.2f * u * 1.2f), h = Math.round(w * 10f / 16f);
+        int iw = d.getIntrinsicWidth(), ih = d.getIntrinsicHeight();
+        try {
+            Bitmap b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            if (iw > 0 && ih > 0) { // centre crop, like the ImageView did
+                float s = Math.max(w / (float) iw, h / (float) ih);
+                int dw = Math.round(iw * s), dh = Math.round(ih * s);
+                d.setBounds((w - dw) / 2, (h - dh) / 2, (w + dw) / 2, (h + dh) / 2);
+            } else d.setBounds(0, 0, w, h);
+            d.draw(new Canvas(b));
+            return new android.graphics.drawable.BitmapDrawable(getResources(), b);
+        } catch (Throwable t) { return d; } // keep the original if it can't be drawn here
+    }
+
+    boolean introPending;
+    List<View> introViews() { List<View> l = new ArrayList<>(Arrays.asList(top, clock, hero)); l.addAll(items); return l; }
+    final Runnable introRun = this::runIntro;
+    void runIntro() {
+        tickH.removeCallbacks(introRun);
+        if (!introPending) return;
+        introPending = false;
+        rise(top, -1.5f, 0); rise(clock, -1.5f, 0); rise(hero, 2f, 100);
+        for (int i = 0; i < items.size(); i++) rise(items.get(i), 3f, 200 + i * 40L);
+    }
+
+    @Override public void onEnterAnimationComplete() {
+        super.onEnterAnimationComplete();
+        runIntro();
     }
 
     void rise(View v, float from, long delay) {
@@ -555,7 +646,7 @@ public class Home extends Activity {
         box.setOnClickListener(v -> {
             if (launching) return;
             if (k == 0) { open(a, null); return; }
-            if (launchOn) { expand(a, card, tile); return; }
+            if (launchOn && k > 0) { ribbons(a); return; }
             // press feedback, then the system's scale-up; start delay reset because rise() left one on this view's animator
             box.animate().scaleX(0.95f).scaleY(0.95f).setStartDelay(0).setDuration(d(120)).setInterpolator(ease)
                     .withEndAction(() -> box.animate().scaleX(1f).scaleY(1f).setDuration(d(120)).withEndAction(() ->
@@ -571,7 +662,8 @@ public class Home extends Activity {
 
     void show(App a) {
         cur = a;
-        eye.setText(a.pkg.equals(Prefs.last(this)) ? R.string.eye_last : R.string.eye_app);
+        String e = getString(a.pkg.equals(Prefs.last(this)) ? R.string.eye_last : R.string.eye_app);
+        if (!e.contentEquals(eye.getText())) eye.setText(e);
         name.animate().cancel(); line.animate().cancel();
         name.animate().alpha(0f).translationY(u).setDuration(d(120)).withEndAction(() -> {
             name.setText(a.name); line.setText(a.line);
@@ -591,50 +683,38 @@ public class Home extends Activity {
         bgAnim.start();
     }
 
-    /** Launch animation: the banner grows from its place to cover the screen while the screen takes the app's colour, then the app opens. */
-    void expand(App a, View card, View tile) {
+    /** Launch animation: the parts of Home fade out, ribbons in shades of the app's colour drop in from the middle outwards, then the app opens. */
+    void ribbons(App a) {
         launching = true;
-        int[] at = new int[2];
-        card.getLocationInWindow(at); // includes the focus scale
-        float cw = card.getWidth() * tile.getScaleX(), ch = card.getHeight() * tile.getScaleY();
-        FrameLayout ov = new FrameLayout(this);
-        View colour = new View(this);
-        colour.setBackgroundColor(a.color);
-        colour.setAlpha(0f);
-        ov.addView(colour, match());
-        Drawable.ConstantState cs = a.banner == null ? null : a.banner.getConstantState();
-        ImageView iv = null;
-        if (cs != null && cw > 0 && ch > 0) {
-            iv = new ImageView(this);
-            iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            iv.setImageDrawable(cs.newDrawable()); // a copy: the row's view keeps its own bounds
-            iv.setOutlineProvider(new Round(1.4f * u * tile.getScaleX()));
-            iv.setClipToOutline(true);
-            iv.setPivotX(0); iv.setPivotY(0);
-            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams((int) cw, (int) ch, Gravity.TOP | Gravity.START);
-            lp.leftMargin = at[0]; lp.topMargin = at[1];
-            ov.addView(iv, lp);
+        View[] parts = {top, clock, hero, scroll};
+        for (View v : parts) v.animate().cancel();
+        for (View v : parts) v.animate().alpha(0f).setStartDelay(0).setDuration(d(150)).start();
+        int mid = RIBBONS / 2;
+        float h = root.getHeight();
+        launchFx.setVisibility(View.VISIBLE);
+        for (int i = 0; i < RIBBONS; i++) {
+            View r = launchFx.getChildAt(i);
+            int dist = Math.abs(i - mid);
+            r.setBackgroundColor(i % 2 == 0 ? mix(a.color, Color.WHITE, 0.10f + 0.05f * dist) : mix(a.color, Color.BLACK, 0.10f + 0.07f * dist));
+            r.setPivotY(i % 2 == 0 ? 0 : h);
+            r.setScaleY(0f);
+            ViewPropertyAnimator p = r.animate().scaleY(1f).setStartDelay(d(100 + 35L * dist)).setDuration(d(320)).setInterpolator(ease);
+            // ribbon 0 lands last (outermost); posted so that last frame is drawn before startActivity blocks this thread
+            if (i == 0) p.withEndAction(() -> tickH.post(() -> { if (launching) open(a, ActivityOptions.makeCustomAnimation(this, android.R.anim.fade_in, 0).toBundle()); }));
+            p.start();
         }
-        launchFx = ov;
-        root.addView(ov, match());
-        long dur = d(340);
-        Runnable go = () -> open(a, ActivityOptions.makeCustomAnimation(this, android.R.anim.fade_in, 0).toBundle());
-        ViewPropertyAnimator c = colour.animate().alpha(1f).setDuration(dur).setInterpolator(ease);
-        if (iv == null) c.withEndAction(go);
-        c.start();
-        if (iv != null) {
-            float sw = root.getWidth(), sh = root.getHeight(), s = Math.max(sw / cw, sh / ch);
-            iv.animate().scaleX(s).scaleY(s).translationX((sw - cw * s) / 2 - at[0]).translationY((sh - ch * s) / 2 - at[1])
-                    .setDuration(dur).setInterpolator(ease).withEndAction(go).start();
-            iv.animate().alpha(0f).setStartDelay(dur / 2).setDuration(dur - dur / 2).start(); // second half: banner gives way to the colour
-        }
-        tickH.postDelayed(clearRun, dur + 2500); // safety net if the app never comes up; onPause removes it
+        tickH.postDelayed(clearRun, d(550) + 2500); // safety net if the app never comes up; onPause removes it
     }
 
     final Runnable clearRun = this::clearLaunch;
     void clearLaunch() {
-        launching = false;
-        if (launchFx != null) { root.removeView(launchFx); launchFx = null; }
+        launching = false; // first: a cancelled ribbon's end action must not launch
+        tickH.removeCallbacks(clearRun);
+        if (launchFx.getVisibility() == View.VISIBLE) {
+            for (int i = 0; i < RIBBONS; i++) launchFx.getChildAt(i).animate().cancel();
+            launchFx.setVisibility(View.GONE);
+        }
+        for (View v : new View[]{top, clock, hero, scroll}) { v.animate().cancel(); v.setAlpha(1f); }
     }
 
     void open(App a, Bundle options) {
@@ -786,8 +866,7 @@ public class Home extends Activity {
     }
 
     void style(TextView t, float size, int weight, int color, float track) {
-        t.setTypeface(inter);
-        t.setFontVariationSettings("'wght' " + weight);
+        t.setTypeface(font(this, weight));
         t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, size * u);
         t.setTextColor(color);
         t.setLetterSpacing(track);

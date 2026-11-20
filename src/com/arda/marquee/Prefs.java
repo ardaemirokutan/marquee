@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.util.TypedValue;
@@ -103,7 +102,6 @@ public class Prefs extends Activity {
             R.string.saver, R.string.cat_anim, R.string.cat_system, R.string.cat_about};
 
     float u, k = 1;
-    Typeface inter;
     LinearLayout cats, list;
     ScrollView pane;
     final DecelerateInterpolator ease = new DecelerateInterpolator(2f);
@@ -121,7 +119,6 @@ public class Prefs extends Activity {
         super.onCreate(b);
         u = getResources().getDisplayMetrics().widthPixels / 100f;
         k = speed(this);
-        inter = Typeface.createFromAsset(getAssets(), "Inter.ttf");
         pkgs = new ArrayList<>(getIntent().getStringArrayListExtra("pkgs"));
         names = new ArrayList<>(getIntent().getStringArrayListExtra("names"));
         getWindow().setBackgroundDrawable(null); // root paints the background; saves a full-screen fill
@@ -162,6 +159,46 @@ public class Prefs extends Activity {
         setContentView(root);
         build();
         cats.getChildAt(0).requestFocus();
+        warmLater();
+    }
+
+    /** Builds the other pages ahead, one per idle moment once the screen has settled, so no category switch builds views. */
+    void warmLater() {
+        boolean idle = warmCat >= CATS.length; // the previous round finished; otherwise it is still queued and restarts from 0
+        warmCat = 0;
+        if (idle) list.postDelayed(() -> android.os.Looper.myQueue().addIdleHandler(this::warm), 700);
+    }
+
+    final android.util.SparseArray<View[]> pages = new android.util.SparseArray<>(); // built pages, reused until a setting changes
+    int warmCat = CATS.length; // CATS.length: no round running
+
+    boolean warm() {
+        if (isFinishing() || ++warmCat >= CATS.length) return false;
+        if (pages.get(warmCat) == null && !peopleMode && !editLoc && editing == null && moving == null) {
+            LinearLayout real = list; int c = cat, s = shown;
+            list = new LinearLayout(this);
+            list.setOrientation(LinearLayout.VERTICAL);
+            cat = warmCat; build();
+            // measure at the real width too: text layout is the costly part of showing a page the first time
+            list.measure(View.MeasureSpec.makeMeasureSpec(real.getWidth(), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+            cat = c; shown = s; list = real;
+        }
+        return true;
+    }
+
+    /** Shows the focused category, reusing its page when nothing changed since it was built. */
+    void page() {
+        View[] p = peopleMode || editLoc ? null : pages.get(cat);
+        if (p == null) { build(); return; }
+        building = true;
+        shown = cat;
+        list.removeAllViews();
+        building = false;
+        field = null;
+        for (View v : p) {
+            if (v.getParent() != null) ((ViewGroup) v.getParent()).removeView(v); // built ahead into a spare container
+            list.addView(v);
+        }
     }
 
     long d(long ms) { return (long) (ms * k); }
@@ -202,16 +239,16 @@ public class Prefs extends Activity {
     /** Category changed: fade the right pane out, rebuild, fade in. */
     void swap() {
         list.animate().cancel();
-        if (k == 0) { list.setAlpha(1f); list.setTranslationX(0); build(); pane.scrollTo(0, 0); return; }
+        if (k == 0) { list.setAlpha(1f); list.setTranslationX(0); page(); pane.scrollTo(0, 0); return; }
         list.animate().alpha(0f).translationX(u).setDuration(d(90)).setInterpolator(ease).withEndAction(() -> {
-            build();
+            page();
             pane.scrollTo(0, 0);
             list.animate().alpha(1f).translationX(0).setDuration(d(200)).start();
         }).start();
     }
 
     void enterRows() {
-        if (shown != cat) { list.animate().cancel(); list.setAlpha(1f); list.setTranslationX(0); build(); }
+        if (shown != cat) { list.animate().cancel(); list.setAlpha(1f); list.setTranslationX(0); page(); }
         for (int i = 0; i < list.getChildCount(); i++) if (list.getChildAt(i).isFocusable()) { list.getChildAt(i).requestFocus(); return; }
     }
 
@@ -256,6 +293,14 @@ public class Prefs extends Activity {
     }
 
     void build() {
+        fill();
+        if (peopleMode || (editLoc && editing != null)) return;
+        View[] a = new View[list.getChildCount()];
+        for (int i = 0; i < a.length; i++) a[i] = list.getChildAt(i);
+        pages.put(cat, a);
+    }
+
+    void fill() {
         building = true;
         shown = cat;
         k = speed(this);
@@ -370,7 +415,7 @@ public class Prefs extends Activity {
 
     void addField() {
         EditText e = new EditText(this);
-        e.setTypeface(inter);
+        e.setTypeface(Home.font(this, 400));
         e.setTextSize(TypedValue.COMPLEX_UNIT_PX, 1.6f * u);
         e.setTextColor(0xFFF5F5F7);
         e.setHintTextColor(0xFF8E8E93);
@@ -428,6 +473,7 @@ public class Prefs extends Activity {
                 if (isDestroyed()) return;
                 if (found == null) { Toast.makeText(this, R.string.location_fail, Toast.LENGTH_SHORT).show(); return; }
                 p(this).edit().putString("wName", found[0]).putString("wLat", found[1]).putString("wLon", found[2]).apply();
+                pages.clear();
                 if (cat == 3 && !peopleMode && editing == null && list.hasFocus()) rebuildFocusing(getString(R.string.location));
             });
         }).start();
@@ -495,7 +541,9 @@ public class Prefs extends Activity {
     }
 
     void rebuildFocusing(String label) {
+        pages.clear(); // a setting changed: any page may show it
         build();
+        warmLater();
         if (field != null) {
             EditText e = field;
             e.requestFocus();
@@ -535,8 +583,7 @@ public class Prefs extends Activity {
 
     TextView text(float size, int weight, int color) {
         TextView t = new TextView(this);
-        t.setTypeface(inter);
-        t.setFontVariationSettings("'wght' " + weight);
+        t.setTypeface(Home.font(this, weight));
         t.setTextSize(TypedValue.COMPLEX_UNIT_PX, size * u);
         t.setTextColor(color);
         t.setGravity(Gravity.CENTER_VERTICAL);
