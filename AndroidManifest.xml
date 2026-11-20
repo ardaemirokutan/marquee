@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.arda.salon" android:versionCode="1" android:versionName="1.0">
+    package="com.arda.marquee" android:versionCode="1" android:versionName="1.0">
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
     <!-- ACTION_DELETE (long-press menu: Uninstall) is refused without this on targetSdk 28+ -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <queries>
@@ -12,7 +13,7 @@
             <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
         </intent>
     </queries>
-    <application android:label="Salon" android:banner="@drawable/banner" android:icon="@drawable/banner"
+    <application android:label="Marquee" android:banner="@drawable/banner" android:icon="@drawable/banner"
         android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen">
         <activity android:name=".Home" android:exported="true" android:launchMode="singleTask"
             android:stateNotNeeded="true" android:excludeFromRecents="true" android:screenOrientation="landscape">

@@ -1,8 +1,9 @@
 #!/bin/sh
-# Builds out/salon.apk with plain SDK tools (no Gradle). Run from Git Bash (Windows) or any POSIX shell: sh build.sh
+# Builds out/marquee.apk with plain SDK tools (no Gradle). Run from Git Bash (Windows) or any POSIX shell: sh build.sh
 # Needs JAVA_HOME (JDK 17+) and ANDROID_HOME or ANDROID_SDK_ROOT (platform 34, build-tools 34.0.0), plus Python 3.
 # They can come from the environment or from a local.env file next to this script (see local.env.example).
 set -e
+KEY_ALIAS=${KEY_ALIAS:-marquee} # alias inside the keystore; set it in the environment or local.env if your key uses another
 cd "$(dirname "$0")"
 [ -f local.env ] && . ./local.env
 die() { echo "build.sh: $*" >&2; exit 1; }
@@ -27,13 +28,13 @@ jar cf out/classes.jar -C out/classes . && "$D8" --min-api 26 --lib "$(native "$
 cp out/base.apk out/unsigned.apk && "$PY" -I -c "import zipfile;zipfile.ZipFile('out/unsigned.apk','a').write('out/classes.dex','classes.dex')"
 "$ZIPALIGN" -f 4 out/unsigned.apk out/aligned.apk
 
-# Signing: KEYSTORE + KEYSTORE_PASS (alias "salon") if given; otherwise a local debug keystore with a fixed test password.
-if [ -n "$KEYSTORE_PASS" ]; then KS=${KEYSTORE:-.keystore/salon.keystore}; else KS=.keystore/debug.keystore; KEYSTORE_PASS=android; fi
+# Signing: KEYSTORE + KEYSTORE_PASS (alias $KEY_ALIAS, default marquee) if given; otherwise a local debug keystore with a fixed test password.
+if [ -n "$KEYSTORE_PASS" ]; then KS=${KEYSTORE:-.keystore/marquee.keystore}; else KS=.keystore/debug.keystore; KEYSTORE_PASS=android; fi
 export KEYSTORE_PASS # apksigner reads it via env:, so it stays off the command line
 if [ ! -f "$KS" ]; then
   mkdir -p "$(dirname "$KS")"
-  keytool -genkeypair -keystore "$KS" -alias salon -keyalg RSA -keysize 2048 -validity 10000 \
-    -storepass "$KEYSTORE_PASS" -keypass "$KEYSTORE_PASS" -dname "CN=Salon" >/dev/null 2>&1
+  keytool -genkeypair -keystore "$KS" -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
+    -storepass "$KEYSTORE_PASS" -keypass "$KEYSTORE_PASS" -dname "CN=Marquee" >/dev/null 2>&1
 fi
-"$APKSIGNER" sign --ks "$(native "$KS")" --ks-key-alias salon --ks-pass env:KEYSTORE_PASS --out out/salon.apk out/aligned.apk
-ls -la out/salon.apk
+"$APKSIGNER" sign --ks "$(native "$KS")" --ks-key-alias "$KEY_ALIAS" --ks-pass env:KEYSTORE_PASS --out out/marquee.apk out/aligned.apk
+ls -la out/marquee.apk

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="watch_label">Salon Home tuşu</string>
+    <string name="watch_label">Marquee Home tuşu</string>
     <string name="pill_settings">Ayarlar</string>
     <string name="pill_wifi">Wi‑Fi</string>
     <string name="pill_display">Ekran ve ses</string>
@@ -13,9 +13,7 @@
     <string name="menu_info">Uygulama bilgisi</string>
     <string name="menu_uninstall">Kaldır</string>
     <string name="profile">Profil</string>
-    <string name="prefs_title">Ana ekran ayarları</string>
-    <string name="h_look">GÖRÜNÜM</string>
-    <string name="h_apps">"UYGULAMALAR   ·   OK: gizle ya da göster   ·   ◀ ▶: sırayı değiştir"</string>
+    <string name="prefs_title">Marquee</string>
     <string name="h_people">"OK: yeniden adlandır   ·   OK'a uzun bas: sil"</string>
     <string name="person">Kişi</string>
     <string name="people">Kişiler</string>
@@ -46,4 +44,47 @@
     <string name="desc_bein">Süper Lig ve maçlar.</string>
     <string name="desc_hbo">HBO dizileri.</string>
     <string name="desc_appletv">Apple TV+ yapımları.</string>
+    <string name="location">Konum</string>
+    <string name="location_hint">Şehir</string>
+    <string name="location_none">Ayarlanmadı</string>
+    <string name="location_fail">Şehir bulunamadı</string>
+    <string name="saver">Ekran koruyucu</string>
+    <string name="saver_min">%d dk</string>
+    <string name="greeting">Karşılama</string>
+    <string name="greet_morning">Günaydın</string>
+    <string name="greet_afternoon">İyi günler</string>
+    <string name="greet_evening">İyi akşamlar</string>
+    <string name="greet_night">İyi geceler</string>
+    <string name="cat_look">Görünüm</string>
+    <string name="cat_apps">Ana sıra</string>
+    <string name="cat_time">Hava ve saat</string>
+    <string name="cat_anim">Animasyonlar</string>
+    <string name="cat_system">Sistem</string>
+    <string name="cat_about">Hakkında</string>
+    <string name="anim_speed">Animasyon hızı</string>
+    <string name="speed_normal">Normal</string>
+    <string name="speed_fast">Hızlı</string>
+    <string name="launch_fx">Açılış animasyonu</string>
+    <string name="sweep">Uygulamaya özel dokunuş</string>
+    <string name="reset_list">Bu kişinin listesini sıfırla</string>
+    <string name="reset_confirm">Onay için tekrar OK</string>
+    <string name="version">Sürüm</string>
+    <string name="licence">Lisans</string>
+    <string name="licence_value">MIT · Inter yazı tipi: SIL OFL</string>
+    <string name="hint_person">OK bir sonraki kişiye geçer</string>
+    <string name="hint_people">Kişi ekle, adını değiştir ya da sil</string>
+    <string name="hint_effect">Seçili uygulama nasıl öne çıksın</string>
+    <string name="hint_bg">Ekranı seçili uygulamanın rengiyle doldur</string>
+    <string name="hint_desc">Uygulama adının altındaki kısa yazı</string>
+    <string name="hint_last">Son açılan uygulamayı sıranın başında tut</string>
+    <string name="hint_reset">Tüm uygulamaları yeniden gösterir, sırayı varsayılana döndürür</string>
+    <string name="hint_app">"OK: gizle ya da göster   ·   OK'a uzun bas, sonra ▲ ▼: taşı"</string>
+    <string name="hint_moving">"▲ ▼: taşı   ·   OK: bitti"</string>
+    <string name="hint_location">Hava durumu için şehir; boş bırakırsan hava durumu gizlenir</string>
+    <string name="hint_greet">Adın yanında \"Günaydın\" gibi bir selam</string>
+    <string name="hint_saver">Bu süre tuşa basılmazsa siyah saat ekranı açılır</string>
+    <string name="hint_speed">Kapalı: tüm geçişler anında olur</string>
+    <string name="hint_launch">Uygulama açılırken banner büyüyüp ekranı doldurur</string>
+    <string name="hint_sweep">Seçili banner\'ın üstünden uygulamanın kendi renginde yumuşak bir ışık geçer</string>
+    <string name="hint_system">Android ekranını açar</string>
 </resources>

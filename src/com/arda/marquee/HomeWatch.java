@@ -1,10 +1,10 @@
-package com.arda.salon;
+package com.arda.marquee;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
 import android.view.accessibility.AccessibilityEvent;
 
-/** Google TV keeps the Home key for its own launcher; when that launcher comes forward, put Salon on top. */
+/** Google TV keeps the Home key for its own launcher; when that launcher comes forward, put Marquee on top. */
 public class HomeWatch extends AccessibilityService {
     @Override public void onAccessibilityEvent(AccessibilityEvent e) {
         if (e.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return;
